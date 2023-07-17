@@ -1,2 +1,5 @@
 /bin
 /obj
+/migrations
+/properties
+/.vs

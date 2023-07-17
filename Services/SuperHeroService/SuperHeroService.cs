@@ -1,72 +1,88 @@
-﻿using SuperHeroAPI.Models;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using SuperHeroAPI.Data;
+using SuperHeroAPI.Models;
+using System.ComponentModel;
 
 namespace SuperHeroAPI.Services.SuperHeroService
 {
     public class SuperHeroService : ISuperHeroService
     {
-        private static List<SuperHero> superHeroes = new List<SuperHero>
-        {
-            new SuperHero
-            {
-                Id = 1,
-                Name = "SpiderMan",
-                FirstName = "Peter",
-                LastName = "Parker",
-                Place = "New York City"
-            }
-        };
 
-        public List<SuperHero> AddHero(SuperHero hero)
+        //private static List<SuperHero> superHeroes = new List<SuperHero>
+        //{
+        //    new SuperHero
+        //    {
+        //        Id = 1,
+        //        Name = "SpiderMan",
+        //        FirstName = "Peter",
+        //        LastName = "Parker",
+        //        Place = "New York City"
+        //    }
+        //};
+
+        private readonly DataContext _context;
+        public SuperHeroService(DataContext context)
         {
-            //if (hero == null) return null;
-            var superHero = superHeroes.Find(x => x.Id == hero.Id);
-            
-            superHeroes.Add(hero);
-            
-            return superHeroes;
+            _context = context;
         }
 
-        public List<SuperHero> DeleteHero(int id)
+        public async Task<List<SuperHero>> AddHero(SuperHero hero)
         {
-            var superHero = superHeroes.Find(x => x.Id == id);
-            if (superHero == null) return null;
+            _context.SuperHeroes.Add(hero);
+            await Save();
 
-            superHeroes.Remove(superHero);
-            return superHeroes;
+            return await _context.SuperHeroes.ToListAsync(); 
         }
 
-        public List<SuperHero> GetAllHeroes()
+        public async Task<List<SuperHero>> GetAllHeroes()
         {
-            return superHeroes;
+            var heroes = await _context.SuperHeroes.ToListAsync();
+            return heroes;
         }
 
-        public SuperHero GetSingleHeroById(int id)
+        public async Task<SuperHero>? GetSingleHeroById(int id)
         {
-            var superHero = superHeroes.Where(x => x.Id == id).FirstOrDefault();
+            var hero = await _context.SuperHeroes.FindAsync(id);
 
-
-            if (superHero == null)
-            {
-                return null;
-            }
-
-            return superHero;
+            return hero;
         }
 
-        public List<SuperHero> UpdateHero(int id, SuperHero hero)
+        public async Task<List<SuperHero>?> UpdateHero(int id, SuperHero hero)
         {
-            var superHero = superHeroes.Find(x => x.Id == id);
-
-            if (superHero == null)
-                return null;
+            var superHero = await _context.SuperHeroes.FindAsync(id);
+            if (superHero is null) return null;
 
             superHero.FirstName = hero.FirstName;
             superHero.LastName = hero.LastName;
             superHero.Name = hero.Name;
             superHero.Place = hero.Place;
+            //mapping with auto mapper solves this issue.
 
-            //superHeroes.Add(hero);
-            return superHeroes;
+            await Save();
+
+            return await _context.SuperHeroes.ToListAsync(); ;
+        }
+
+        public async Task<List<SuperHero>?> DeleteHero(int id)
+        {
+            var hero = await _context.SuperHeroes.FindAsync(id);
+            _context.SuperHeroes.Remove(hero);
+
+            await Save();
+
+            return await _context.SuperHeroes.ToListAsync();
+        }
+
+        public async Task<bool> Save()
+        {
+            var saved = await _context.SaveChangesAsync();
+            return saved > 0 ? true : false;
+        }
+
+        public async Task<bool> SuperHeroExistsAsync(int id)
+        {
+            bool exists = await _context.SuperHeroes.AnyAsync(p => p.Id == id);
+            return exists;
         }
     }
 }
